@@ -1,0 +1,30 @@
+.env
+*.env
+src/main/resources/keystore.p12
+keystore.p12
+*.p12
+
+# ── Maven build çıktısı ──────────────────────────────────────────────────
+target/
+*.class
+
+# ── Python ─────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+
+# ── IDE ayarları ──────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+.settings/
+.classpath
+.project
+
+# ── İşletim sistemi ────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Geçici / debug dosyaları ───────────────────────────────────────────
+*.log
+*.tmp

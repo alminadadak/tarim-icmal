@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tarım Verisi Analiz Paneli</title>
+    <!-- ÇIKIŞ YAP BUTONU (Güvenli POST Yöntemi) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'agri-green': '#16a34a',
+                        'agri-light': '#f0fdf4',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Toastify CSS ve JS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen">
+
+    <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between md:h-16 items-center py-3 md:py-0 gap-3 md:gap-0">
+                <div class="flex items-center gap-3">
+                    <span class="font-bold text-lg md:text-xl text-gray-900 text-center">Tarım Analiz Paneli</span>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-center gap-2 md:gap-4 w-full md:w-auto">
+                    
+                    <!-- Sezon Seçimi -->
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <label for="season-select" class="hidden md:block text-sm font-medium text-gray-600 whitespace-nowrap">Sezon:</label>
+                        <select id="season-select" class="w-full sm:w-28 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-agri-green focus:border-agri-green block p-2.5 outline-none transition-all cursor-pointer shadow-sm">
+                            <option value="">Yükleniyor...</option>
+                        </select>
+                    </div>
+
+                    <!-- Dönem Seçimi -->
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <label for="period-select" class="hidden md:block text-sm font-medium text-gray-600 whitespace-nowrap">Dönem:</label>
+                        <select id="period-select" class="w-full sm:w-28 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-agri-green focus:border-agri-green block p-2.5 outline-none transition-all cursor-pointer shadow-sm">
+                            <option value="Tüm">Tüm</option>
+                            <option value="Kışlık">Kışlık</option>
+                            <option value="Yazlık">Yazlık</option>
+                        </select>
+                    </div>
+
+                    <!-- İl Seçimi -->
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <label for="city-select" class="hidden md:block text-sm font-medium text-gray-600 whitespace-nowrap">İl Seçimi:</label>
+                        <select id="city-select" class="w-full sm:w-48 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-agri-green focus:border-agri-green block p-2.5 outline-none transition-all cursor-pointer shadow-sm">
+                            <option value="">Yükleniyor...</option>
+                        </select>
+                    </div>
+                    
+                    <!-- (Eski Rapor Butonu Buradan Silindi) -->
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- Başlık ve Butonlar -->
+        <div class="mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <h1 id="current-city-title" class="text-xl md:text-2xl font-bold text-gray-900 text-center md:text-left w-full md:w-auto">İl Seçin</h1>
+            
+            <div class="flex flex-wrap items-center justify-center md:justify-end gap-2 md:gap-3 w-full md:w-auto">
+                <span id="last-updated-text" class="text-xs md:text-sm text-gray-500 text-center w-full sm:w-auto"></span>
+                <span class="bg-agri-light text-agri-green text-xs md:text-sm font-semibold px-3 py-1.5 rounded-full border border-green-200 shadow-sm whitespace-nowrap">
+                    Canlı Veri
+                </span>
+                <button id="bot-tetikle-btn" class="bg-agri-green text-white text-xs md:text-sm font-medium px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 shadow-sm flex-1 sm:flex-none">
+                    <i class="fa-solid fa-arrows-rotate"></i> Şimdi Güncelle
+                </button>
+            </div>
+        </div>
+
+        <!-- YENİ: SEKME (TAB) MENÜSÜ -->
+        <div class="flex border-b border-gray-200 mb-8 overflow-x-auto">
+            <button id="tab-btn-icmal" class="py-3 px-6 text-sm font-bold text-agri-green border-b-2 border-agri-green bg-agri-light/30 transition-colors whitespace-nowrap">
+                <i class="fa-solid fa-chart-pie mr-2"></i> İcmal Tablosu
+            </button>
+            <button id="tab-btn-raporlar" class="py-3 px-6 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300 transition-colors whitespace-nowrap">
+                <i class="fa-solid fa-file-signature mr-2"></i> Saha Raporları ve Analiz
+            </button>
+            <button id="tab-btn-yonetim" class="py-3 px-6 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300 transition-colors whitespace-nowrap ml-auto">
+                <i class="fa-solid fa-cloud-arrow-down mr-2"></i> Veri Yönetimi
+            </button>
+        </div>
+
+        <!-- YENİ: 1. SEKME İÇERİĞİ (İCMAL) -->
+        <div id="sekme-icmal" class="block">
+            
+            <!-- UYDU EĞİTİM & TAHMİN İSTATİSTİKLERİ -->
+            <div class="flex flex-wrap items-center gap-4 mb-6">
+                <div class="bg-blue-50 border border-blue-100 rounded-lg px-4 py-2 flex items-center gap-3 shadow-sm transition-colors hover:bg-blue-100/50">
+                    <span class="text-xs text-blue-600 font-bold uppercase tracking-wider">Eğitim</span>
+                    <span id="stat-egitim" class="text-lg font-black text-blue-900">0</span>
+                </div>
+                
+                <div class="bg-purple-50 border border-purple-100 rounded-lg px-4 py-2 flex items-center gap-3 shadow-sm transition-colors hover:bg-purple-100/50">
+                    <span class="text-xs text-purple-600 font-bold uppercase tracking-wider">Tahmin</span>
+                    <span id="stat-tahmin" class="text-lg font-black text-purple-900">0</span>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Grafik -->
+                <div class="lg:col-span-3 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 transition-all hover:shadow-md">
+                    <div class="flex justify-between items-center border-b border-gray-100 pb-2 mb-4">
+                        <h2 class="text-lg font-semibold text-gray-800">
+                            <i class="fa-solid fa-chart-column mr-2 text-agri-green"></i>Ürün Bazlı Parsel Analizi
+                        </h2>
+                        <button id="chart-download-btn" class="bg-white border border-gray-300 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
+                            <i class="fa-solid fa-image text-agri-green"></i> Grafiği PNG İndir
+                        </button>
+                    </div>
+                    <div class="relative h-80 w-full bg-white">
+                        <canvas id="mainChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tablo -->
+                <div class="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md">
+                    <div class="p-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                        <h2 class="text-lg font-semibold text-gray-800">
+                            <i class="fa-solid fa-table-list mr-2 text-agri-green"></i>İcmal Veri Tablosu
+                        </h2>
+                        <div class="flex items-center gap-2">
+                            <div class="relative">
+                                <button id="urun-filtre-btn" class="bg-white border border-gray-300 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
+                                    <i class="fa-solid fa-filter text-agri-green"></i> Ürün Filtrele
+                                </button>
+                                <div id="urun-filtre-panel" class="hidden absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-3 max-h-72 overflow-y-auto">
+                                    <div class="flex justify-between items-center mb-2 pb-2 border-b border-gray-100">
+                                        <span class="text-xs font-semibold text-gray-500 uppercase">Ürünler</span>
+                                        <button id="urun-filtre-tumunu-sec" class="text-xs text-agri-green hover:underline">Tümünü Seç</button>
+                                    </div>
+                                    <div id="urun-filtre-checkboxlar" class="space-y-1.5"></div>
+                                </div>
+                            </div>
+                            <button id="csv-download-btn" class="bg-white border border-gray-300 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
+                                <i class="fa-solid fa-file-csv text-agri-green"></i> CSV İndir
+                            </button>
+                            <button id="xlsx-download-btn" class="bg-white border border-gray-300 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
+                                <i class="fa-solid fa-file-excel text-agri-green"></i> Excel İndir
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-600">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    <th scope="col" class="px-4 py-4 border-r border-gray-200">Ürün Adı</th>
+                                    <th scope="col" class="px-4 py-4 border-r border-gray-200 text-right">4 da Altı Parsel</th>
+                                    <th scope="col" class="px-4 py-4 border-r border-gray-200 text-right">4 da Üstü Parsel</th>
+                                    <th scope="col" class="px-4 py-4 border-r border-gray-200 text-right">Planlanan</th>
+                                    <th scope="col" class="px-4 py-4 border-r border-gray-200 text-right">Ref. Parsel</th>
+                                    <th scope="col" class="px-4 py-4 border-r border-gray-200 text-right">Nihai Ref.</th>
+                                    <th scope="col" class="px-4 py-4 border-r border-gray-200 text-right">Nihai Alan</th>
+                                    <th scope="col" class="px-4 py-4 text-center">Tamamlanan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body" class="divide-y divide-gray-100">
+                                <tr><td colspan="8" class="text-center py-8">Veriler yükleniyor...</td></tr>
+                            </tbody>
+                            <tfoot id="table-footer" class="bg-gray-50 font-bold text-gray-800 border-t-2 border-gray-200">
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- /#sekme-icmal kapanışı -->
+
+        <!-- YENİ: 2. SEKME İÇERİĞİ (RAPORLAR VE ANALİZ) -->
+        <div id="sekme-raporlar" class="hidden space-y-6">
+            
+            <!-- AKILLI ÖZET KUTUSU -->
+            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-6 shadow-sm">
+                <h2 class="text-lg font-bold text-indigo-900 mb-3 flex items-center gap-2">
+                    <span class="text-indigo-600 font-bold">Sistem Analiz Özeti</span>
+                </h2>
+                <div id="ai-summary-content" class="text-gray-700 leading-relaxed font-medium space-y-2">
+                    <!-- JavaScript buraya otomatik cümleler kuracak -->
+                    <span class="text-gray-500 italic text-sm">Veriler analiz ediliyor...</span>
+                </div>
+            </div>
+
+            <!-- GEÇMİŞ RAPORLAR VE BUTONLAR -->
+            <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-6 border-b border-gray-100 pb-4 gap-3">
+                    <h2 class="text-lg font-bold text-gray-800">
+                        Rapor Girişleri
+                    </h2>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <!-- YENİ: HIZLI GÜNCELLE BUTONU -->
+                        <button id="btn-rapor-hizli-guncelle" class="flex-1 sm:flex-none bg-white border border-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors shadow-sm flex justify-center items-center gap-2">
+                            <i class="fa-solid fa-arrows-rotate text-agri-green"></i> Raporları Güncelle
+                        </button>
+                        
+                        <button id="btn-yeni-rapor" class="flex-1 sm:flex-none bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex justify-center items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Yeni Kayıt Ekle
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Rapor Listesi -->
+                <div id="reports-list" class="space-y-4">
+                    <!-- JavaScript ile burası dolacak -->
+                </div>
+            </div>
+        </div> <!-- /#sekme-raporlar kapanışı -->
+
+
+        <!-- YENİ: 3. SEKME İÇERİĞİ (VERİ YÖNETİMİ) -->
+        <div id="sekme-yonetim" class="hidden space-y-6">
+            
+            <!-- Link Giriş Alanı -->
+            <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 border-b border-gray-100 pb-2">
+                    <i class="fa-solid fa-link text-blue-500 mr-2"></i>Google E-Tablo Bağlantısı
+                </h2>
+                <p class="text-sm text-gray-500 mb-4">Tüm sistemin verileri çekeceği ana Google Excel dosyasının linkini buraya yapıştırın.</p>
+                <div class="flex flex-col sm:flex-row items-center gap-3">
+                    <input type="text" id="google-csv-url" placeholder="Google E-Tablo Linki..." class="w-full text-sm text-gray-600 border border-gray-300 rounded-lg p-3 flex-1 outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <!-- Senkronizasyon Butonları -->
+            <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 border-b border-gray-100 pb-2">
+                    <i class="fa-solid fa-arrows-rotate text-agri-green mr-2"></i>Bulut Senkronizasyon Merkezi
+                </h2>
+                
+                <div class="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Hedef Sezon:</label>
+                    <input type="number" id="import-season-input" value="2026" min="2000" max="2100"
+                           class="text-sm text-gray-900 border border-gray-300 rounded-lg p-2.5 w-32 focus:ring-agri-green focus:border-agri-green outline-none" />
+                    <p class="text-xs text-gray-500 mt-1">Aşağıdaki ÇKS ve Planlanan verileri bu sezona işlenecektir.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- CKS Kartı -->
+                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-5 flex flex-col justify-between shadow-sm">
+                        <div>
+                            <h4 class="font-bold text-gray-800 mb-1">ÇKS Parsel Verileri</h4>
+                            <p class="text-xs text-gray-500 mb-4">4 Da Altı/Üstü verilerini günceller.</p>
+                        </div>
+                        <button id="cks-upload-btn" class="w-full bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
+                            <i class="fa-solid fa-cloud-arrow-down mr-1"></i> Çek
+                        </button>
+                        <div id="cks-upload-result" class="mt-3 text-sm text-center"></div>
+                    </div>
+
+                    <!-- Planlanan Kartı -->
+                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-5 flex flex-col justify-between shadow-sm">
+                        <div>
+                            <h4 class="font-bold text-gray-800 mb-1">Planlanan Veriler</h4>
+                            <p class="text-xs text-gray-500 mb-4">Ürün bazlı hedef verilerini günceller.</p>
+                        </div>
+                        <button id="planlanan-upload-btn" class="w-full bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
+                            <i class="fa-solid fa-cloud-arrow-down mr-1"></i> Çek
+                        </button>
+                        <div id="planlanan-upload-result" class="mt-3 text-sm text-center"></div>
+                    </div>
+
+                    <!-- Rapor Kartı -->
+                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-5 flex flex-col justify-between shadow-sm">
+                        <div>
+                            <h4 class="font-bold text-gray-800 mb-1">Raporlar</h4>
+                            <p class="text-xs text-gray-500 mb-4">Tüm il ve kategorilerdeki raporları günceller.</p>
+                        </div>
+                        <button id="google-sync-btn" class="w-full bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
+                            <i class="fa-solid fa-cloud-arrow-down mr-1"></i> Çek
+                        </button>
+                        <div id="google-sync-result" class="mt-3 text-sm text-center"></div>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- /#sekme-yonetim kapanışı -->
+
+    </main>
+
+    <!-- Bot Güncelleme Modalı -->
+    <div id="bot-modal-backdrop" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">
+                    <i class="fa-solid fa-rotate text-agri-green mr-2"></i>Verileri Güncelle
+                </h3>
+                <button id="bot-modal-kapat" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <p class="text-sm text-gray-500 mb-4">
+                Tarım Orman sistemine giriş bilgilerinle, <strong>tüm illerin</strong> <strong class="text-agri-green" id="modal-sezon-text"></strong> sezonu verisi güncellenecek.
+            </p>
+
+            <div class="space-y-3">
+                <input type="text" id="bot-kullanici-adi" placeholder="Kullanıcı adı"
+                       class="w-full text-sm text-gray-700 border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-agri-green focus:border-agri-green" />
+                <input type="password" id="bot-sifre" placeholder="Şifre"
+                       class="w-full text-sm text-gray-700 border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-agri-green focus:border-agri-green" />
+            </div>
+
+            <div id="bot-guncelle-result" class="mt-3 text-sm"></div>
+
+            <div class="mt-5 flex justify-end gap-2">
+                <button id="bot-modal-iptal"
+                        class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                    İptal
+                </button>
+                <button id="bot-guncelle-btn"
+                        class="px-4 py-2 text-sm font-medium bg-agri-green text-white rounded-lg hover:bg-green-700 transition-colors">
+                    Güncelle
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Eski JavaScript Kodları (Düzenlendi) -->
+    <script>
+        const formatNum = (num) => {
+            if (num === null || num === undefined) return '-';
+            return new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 }).format(num);
+        };
+
+        function showToast(mesaj, tip = 'info') {
+            let bgColor = "#3b82f6"; 
+            if (tip === 'success') bgColor = "#16a34a"; 
+            else if (tip === 'error') bgColor = "#dc2626"; 
+            else if (tip === 'warning') bgColor = "#f97316"; 
+
+            Toastify({
+                text: mesaj,
+                duration: 3000,
+                gravity: "bottom", 
+                position: "right", 
+                style: { background: bgColor, borderRadius: "8px", fontSize: "14px", fontWeight: "500" }
+            }).showToast();
+        }
+
+        let mainChartInstance = null;
+        let currentRecords = [];
+        let currentIlAdi = '';
+        let currentSezon = ''; 
+        let gizliUrunler = new Set();
+
+        function gorunenKayitlar() {
+            return currentRecords.filter(r => !gizliUrunler.has(r.urun));
+        }
+
+        function urunFiltrePaneliniOlustur() {
+            const container = document.getElementById('urun-filtre-checkboxlar');
+            container.innerHTML = '';
+            gizliUrunler = new Set();
+
+            const urunler = [...new Set(currentRecords.map(r => r.urun))];
+
+            urunler.forEach(urun => {
+                const label = document.createElement('label');
+                label.className = 'flex items-center gap-2 text-sm text-gray-700 cursor-pointer';
+                label.innerHTML = `
+                    <input type="checkbox" checked class="urun-filtre-checkbox rounded text-agri-green focus:ring-agri-green" data-urun="${urun}" />
+                    ${urun}
+                `;
+                container.appendChild(label);
+            });
+
+            container.querySelectorAll('.urun-filtre-checkbox').forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    const urun = e.target.dataset.urun;
+                    if (e.target.checked) {
+                        gizliUrunler.delete(urun);
+                    } else {
+                        gizliUrunler.add(urun);
+                    }
+                    filtreliGorunumuGuncelle();
+                });
+            });
+        }
+
+        function filtreliGorunumuGuncelle() {
+            const gorunen = gorunenKayitlar();
+            updateTable(gorunen);
+            updateChart(gorunen);
+        }
+
+        function updateTable(dataRecords) {
+            const tbody = document.getElementById('table-body');
+            const tfoot = document.getElementById('table-footer');
+            tbody.innerHTML = '';
+
+            if (!dataRecords || dataRecords.length === 0) {
+                 tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-gray-400 italic">Bu il ve sezon için henüz veritabanında kayıt bulunmuyor.</td></tr>`;
+                 tfoot.innerHTML = '';
+                 return;
+            }
+
+            let totals = { under4: 0, over4: 0, planned: 0, refParcel: 0, finalRef: 0, finalArea: 0 };
+
+            dataRecords.forEach(record => {
+                totals.under4 += record.parsel4daAlti || 0;
+                totals.over4 += record.parsel4daUstu || 0;
+                totals.planned += record.planlanan || 0;
+                totals.refParcel += record.referansParsel || 0;
+                totals.finalRef += record.nihaiReferans || 0;
+                totals.finalArea += record.nihaiAlan || 0;
+
+                const yuzde = record.tamamlananYuzde;
+                const yuzdeText = (yuzde === null || yuzde === undefined) ? '-' : `%${yuzde}`;
+
+                let badgeClass = "bg-gray-100 text-gray-800";
+                if (yuzde !== null && yuzde !== undefined) {
+                    if (yuzde > 80) badgeClass = "bg-green-100 text-green-800 border-green-200";
+                    else if (yuzde > 30) badgeClass = "bg-blue-100 text-blue-800 border-blue-200";
+                    else if (yuzde > 0) badgeClass = "bg-orange-100 text-orange-800 border-orange-200";
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-agri-light/50 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-4 py-3 border-r border-gray-100 font-bold text-gray-900">${record.urun}</td>
+                    <td class="px-4 py-3 border-r border-gray-100 text-right">${formatNum(record.parsel4daAlti)}</td>
+                    <td class="px-4 py-3 border-r border-gray-100 text-right">${formatNum(record.parsel4daUstu)}</td>
+                    <td class="px-4 py-3 border-r border-gray-100 text-right bg-blue-50/30">${formatNum(record.planlanan)}</td>
+                    <td class="px-4 py-3 border-r border-gray-100 text-right bg-orange-50/30">${formatNum(record.referansParsel)}</td>
+                    <td class="px-4 py-3 border-r border-gray-100 text-right bg-gray-100/50">${formatNum(record.nihaiReferans)}</td>
+                    <td class="px-4 py-3 border-r border-gray-100 text-right font-bold text-gray-700">${formatNum(record.nihaiAlan)}</td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="px-2.5 py-1 rounded-md text-xs font-semibold border ${badgeClass}">
+                            ${yuzdeText}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            tfoot.innerHTML = `
+                <tr>
+                    <td class="px-4 py-3 border-r border-gray-200">GENEL TOPLAM</td>
+                    <td class="px-4 py-3 border-r border-gray-200 text-right">${formatNum(totals.under4)}</td>
+                    <td class="px-4 py-3 border-r border-gray-200 text-right">${formatNum(totals.over4)}</td>
+                    <td class="px-4 py-3 border-r border-gray-200 text-right">${formatNum(totals.planned)}</td>
+                    <td class="px-4 py-3 border-r border-gray-200 text-right">${formatNum(totals.refParcel)}</td>
+                    <td class="px-4 py-3 border-r border-gray-200 text-right">${formatNum(totals.finalRef)}</td>
+                    <td class="px-4 py-3 border-r border-gray-200 text-right text-agri-green">${formatNum(totals.finalArea)}</td>
+                    <td class="px-4 py-3 text-center">-</td>
+                </tr>
+            `;
+        }
+
+        function updateChart(dataRecords) {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+
+            if (mainChartInstance) {
+                mainChartInstance.destroy();
+            }
+
+            if (!dataRecords || dataRecords.length === 0) {
+                 mainChartInstance = new Chart(ctx, { type: 'bar', data: { labels: [], datasets: [] } });
+                 return;
+            }
+
+            const labels = dataRecords.map(r => r.urun);
+            const plannedData = dataRecords.map(r => r.planlanan);
+            const refData = dataRecords.map(r => r.referansParsel);
+            const finalRefData = dataRecords.map(r => r.nihaiReferans);
+
+            mainChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Planlanan', data: plannedData, backgroundColor: '#3b82f6', borderRadius: 4 },
+                        { label: 'Referans Parsel', data: refData, backgroundColor: '#f97316', borderRadius: 4 },
+                        { label: 'Nihai Referans', data: finalRefData, backgroundColor: '#6b7280', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+                        x: { grid: { display: false } }
+                    },
+                    interaction: { mode: 'nearest', axis: 'x', intersect: false }
+                }
+            });
+        }
+
+        function updateLastUpdatedText(dataRecords) {
+            const el = document.getElementById('last-updated-text');
+            if (!dataRecords || dataRecords.length === 0) {
+                el.textContent = '';
+                return;
+            }
+            const timestamps = dataRecords
+                .map(r => r.sonGuncelleme)
+                .filter(t => t)
+                .map(t => new Date(t));
+
+            if (timestamps.length === 0) {
+                el.textContent = '';
+                return;
+            }
+            const enYeni = new Date(Math.max(...timestamps));
+            const formatted = enYeni.toLocaleString('tr-TR', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+            el.textContent = `Son güncelleme: ${formatted}`;
+        }
+
+        function downloadCsv() {
+            const veri = gorunenKayitlar();
+            if (!veri || veri.length === 0) {
+                showToast('İndirilecek veri bulunamadı.', 'warning');
+                return;
+            }
+
+            const basliklar = [
+                'Ürün Adı', '4 da Altı Parsel', '4 da Üstü Parsel',
+                'Planlanan', 'Ref. Parsel', 'Nihai Ref.', 'Nihai Alan', 'Tamamlanan %'
+            ];
+
+            const satirlar = [basliklar.join(';')];
+
+            veri.forEach(r => {
+                const yuzdeMetni = (r.tamamlananYuzde !== null && r.tamamlananYuzde !== undefined)
+                    ? `${r.tamamlananYuzde}%`
+                    : '';
+                const satir = [
+                    r.urun,
+                    r.parsel4daAlti ?? '',
+                    r.parsel4daUstu ?? '',
+                    r.planlanan ?? '',
+                    r.referansParsel ?? '',
+                    r.nihaiReferans ?? '',
+                    r.nihaiAlan ?? '',
+                    yuzdeMetni
+                ];
+                satirlar.push(satir.join(';'));
+            });
+
+            const csvIcerik = satirlar.join('\r\n');
+            const blob = new Blob(['\uFEFF' + csvIcerik], { type: 'text/csv;charset=utf-8;' });
+
+            const tarih = new Date().toISOString().slice(0, 10);
+            const dosyaAdi = `icmal_${currentIlAdi}_${currentSezon}_${tarih}.csv`;
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = dosyaAdi;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function downloadXlsx() {
+            const veri = gorunenKayitlar();
+            if (!veri || veri.length === 0) {
+                showToast('İndirilecek veri bulunamadı.', 'warning');
+                return;
+            }
+
+            const basliklar = [
+                'Ürün Adı', '4 da Altı Parsel', '4 da Üstü Parsel',
+                'Planlanan', 'Ref. Parsel', 'Nihai Ref.', 'Nihai Alan', 'Tamamlanan %'
+            ];
+
+            const satirlar = [basliklar];
+
+            veri.forEach(r => {
+                const yuzdeMetni = (r.tamamlananYuzde !== null && r.tamamlananYuzde !== undefined)
+                    ? `${r.tamamlananYuzde}%`
+                    : '';
+                satirlar.push([
+                    r.urun,
+                    r.parsel4daAlti ?? '',
+                    r.parsel4daUstu ?? '',
+                    r.planlanan ?? '',
+                    r.referansParsel ?? '',
+                    r.nihaiReferans ?? '',
+                    r.nihaiAlan ?? '',
+                    yuzdeMetni
+                ]);
+            });
+
+            const worksheet = XLSX.utils.aoa_to_sheet(satirlar);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'İcmal');
+
+            const tarih = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(workbook, `icmal_${currentIlAdi}_${currentSezon}_${tarih}.xlsx`);
+        }
+
+        function downloadChart() {
+            if (!mainChartInstance || gorunenKayitlar().length === 0) {
+                showToast('İndirilecek veri bulunamadı.', 'warning');
+                return;
+            }
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 1920;
+            tempCanvas.height = 640;
+
+            const backgroundPlugin = {
+                id: 'customCanvasBackgroundColor',
+                beforeDraw: (chart) => {
+                    const ctx = chart.canvas.getContext('2d');
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'destination-over';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, chart.width, chart.height);
+                    ctx.restore();
+                }
+            };
+
+            const tempChart = new Chart(tempCanvas, {
+                type: mainChartInstance.config.type,
+                data: mainChartInstance.data,
+                options: {
+                    ...mainChartInstance.options,
+                    responsive: false, 
+                    animation: false,  
+                    plugins: {
+                        ...mainChartInstance.options.plugins,
+                        legend: {
+                            position: 'top',
+                            labels: { font: { size: 24 } } 
+                        }
+                    },
+                    scales: {
+                        x: { 
+                            grid: { display: false },
+                            ticks: { font: { size: 16 } } 
+                        },
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { color: '#f3f4f6' },
+                            ticks: { font: { size: 18 } } 
+                        }
+                    }
+                },
+                plugins: [backgroundPlugin]
+            });
+
+            const resimURL = tempCanvas.toDataURL('image/jpeg', 1.0);
+            const tarih = new Date().toISOString().slice(0, 10);
+            const dosyaAdi = `grafik_${currentIlAdi}_${currentSezon}_${tarih}.jpg`;
+
+            const link = document.createElement('a');
+            link.href = resimURL;
+            link.download = dosyaAdi;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            tempChart.destroy();
+        }
+
+        function acBotModal() {
+            document.getElementById('bot-modal-backdrop').classList.remove('hidden');
+            document.getElementById('modal-sezon-text').textContent = document.getElementById('season-select').value;
+        }
+
+        function kapatBotModal() {
+            document.getElementById('bot-modal-backdrop').classList.add('hidden');
+            document.getElementById('bot-sifre').value = '';
+            document.getElementById('bot-guncelle-result').innerHTML = '';
+        }
+
+        async function botGuncelle() {
+            const kullaniciAdi = document.getElementById('bot-kullanici-adi').value;
+            const sifre = document.getElementById('bot-sifre').value;
+            const seciliSezon = document.getElementById('season-select').value;
+            const resultDiv = document.getElementById('bot-guncelle-result');
+
+            if (!kullaniciAdi || !sifre) {
+                resultDiv.innerHTML = '<span class="text-red-600">Kullanıcı adı ve şifre gerekli.</span>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<span class="text-gray-500"><i class="fa-solid fa-spinner fa-spin"></i> Güncelleniyor, bu birkaç dakika sürebilir...</span>';
+
+            try {
+                // YENİ: Bota sezon bilgisini de yolluyoruz ki sadece o seneyi çeksin
+                const response = await fetch('/api/bot/guncelle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ kullaniciAdi, sifre, sezon: seciliSezon })
+                });
+
+                const mesaj = await response.text();
+
+                document.getElementById('bot-sifre').value = '';
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `<span class="text-green-700 font-medium"><i class="fa-solid fa-circle-check"></i> ${mesaj}</span>`;
+
+                    // DÜZELTME: Veritabanı bot çalışmadan önce boştu ve il
+                    // listesi hiç doldurulmamışsa (city-select boştu) bu
+                    // senaryoyu da kapsamak için önce sezon ve il listelerini
+                    // tazeliyoruz.
+                    await loadSezonListesi();
+
+                    const oncekiIlSecimi = currentIlAdi;
+                    await loadIlListesi();
+
+                    const citySelect = document.getElementById('city-select');
+                    if (oncekiIlSecimi) {
+                        const hedefSecenek = Array.from(citySelect.options)
+                            .find(o => o.value === oncekiIlSecimi);
+                        if (hedefSecenek) {
+                            citySelect.value = oncekiIlSecimi;
+                            loadIlVerisi(oncekiIlSecimi);
+                        }
+                    }
+
+                    setTimeout(kapatBotModal, 2000);
+                } else {
+                    resultDiv.innerHTML = `<span class="text-red-600">${mesaj}</span>`;
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<span class="text-red-600">Sunucuya ulaşılamadı: ${err.message}</span>`;
+            }
+        }
+
+        async function loadSezonListesi() {
+            const select = document.getElementById('season-select');
+            const eskiSecim = select.value; // YENİ: Kullanıcının mevcut seçimini hafızaya al
+
+            try {
+                const response = await fetch('/api/sezonlar');
+                const sezonlar = await response.json();
+                select.innerHTML = '';
+                if (sezonlar.length === 0) {
+                     select.innerHTML = '<option value="">Bulunamadı</option>';
+                     return;
+                }
+                sezonlar.forEach(s => {
+                    const option = document.createElement('option');
+                    option.value = s;
+                    option.textContent = s;
+                    select.appendChild(option);
+                });
+                
+                // YENİ: Eğer kullanıcının eski seçimi hala geçerliyse onu seçili bırak, yoksa en yeniyi seç
+                if (eskiSecim && sezonlar.includes(parseInt(eskiSecim))) {
+                    select.value = eskiSecim;
+                    currentSezon = eskiSecim;
+                } else if (eskiSecim && sezonlar.includes(eskiSecim)) {
+                    select.value = eskiSecim;
+                    currentSezon = eskiSecim;
+                } else {
+                    select.value = sezonlar[0];
+                    currentSezon = sezonlar[0];
+                }
+            } catch (err) {
+                console.error("Sezon listesi çekilemedi.", err);
+                select.innerHTML = '<option value="">Hata</option>';
+            }
+        }
+
+        async function loadIlVerisi(ilAdi) {
+            const seciliSezon = document.getElementById('season-select').value;
+            const seciliDonem = document.getElementById('period-select').value;
+            currentIlAdi = ilAdi;
+            currentSezon = seciliSezon;
+            
+            document.getElementById('current-city-title').textContent = `${ilAdi} İli Özeti (${seciliSezon} - ${seciliDonem})`;
+            
+            try {
+                let url = `/api/icmal?il=${encodeURIComponent(ilAdi)}&donem=${encodeURIComponent(seciliDonem)}`;
+                if (seciliSezon) url += `&sezon=${encodeURIComponent(seciliSezon)}`;
+
+                const response = await fetch(url);
+                if (response.ok) {
+                    let records = await response.json();
+                    records.sort((a, b) => {
+                        if (a.urun === 'DİĞER') return 1;
+                        if (b.urun === 'DİĞER') return -1;
+                        return a.urun.localeCompare(b.urun, 'tr');
+                    });
+                    currentRecords = records;
+                    urunFiltrePaneliniOlustur();
+                    updateTable(gorunenKayitlar());
+                    updateChart(gorunenKayitlar());
+                    updateLastUpdatedText(records);
+                    loadClassificationsSummary(ilAdi, seciliSezon);
+                } else {
+                    currentRecords = [];
+                    updateTable([]);
+                    updateChart([]);
+                    updateLastUpdatedText([]);
+                }
+            } catch (err) {
+                console.error("Spring Boot sunucusuna ulaşılamadı.", err);
+            }
+        }
+
+        async function loadIlListesi() {
+            const select = document.getElementById('city-select');
+            try {
+                const response = await fetch('/api/iller');
+                let iller = await response.json(); // const yerine let yaptık ki sıralayabilelim
+                
+                iller.sort((a, b) => a.localeCompare(b, 'tr', { sensitivity: 'accent' }));
+                select.innerHTML = '';
+                iller.forEach(il => {
+                    const option = document.createElement('option');
+                    option.value = il;
+                    option.textContent = il;
+                    select.appendChild(option);
+                });
+                if (iller.length > 0) {
+                    select.value = iller[0];
+                    loadIlVerisi(iller[0]);
+                }
+            } catch (err) {
+                console.error("İl listesi çekilemedi. Sunucu açık mı?", err);
+            }
+        }
+
+        // --- GOOGLE'DAN VERİ ÇEKME (YENİ BULUT MİMARİSİ) ---
+        // --- GOOGLE'DAN VERİ ÇEKME (YENİ BULUT MİMARİSİ) ---
+        async function fetchFromGoogleAndSave() {
+            const urlInput = document.getElementById('google-csv-url').value.trim();
+            const resultDiv = document.getElementById('google-sync-result') || document.getElementById('btn-rapor-hizli-guncelle'); // Hangi butona basıldığına göre
+
+            if (urlInput) {
+                try {
+                    await fetch('/api/reports/settings/sync-url', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: urlInput })
+                    });
+                } catch (e) {
+                    console.error("Link kaydedilemedi", e);
+                }
+            }
+
+            if(document.getElementById('google-sync-result')) {
+                document.getElementById('google-sync-result').innerHTML = '<span class="text-blue-500"><i class="fa-solid fa-spinner fa-spin"></i> Google E-Tablo ile senkronize ediliyor...</span>';
+            }
+
+            try {
+                const response = await fetch('/api/reports/sync', { method: 'POST' });
+
+                if (response.ok) {
+                    const sonuc = await response.json();
+                    
+                    if(document.getElementById('google-sync-result')) {
+                        document.getElementById('google-sync-result').innerHTML = `<span class="text-green-700 font-medium"><i class="fa-solid fa-circle-check"></i> ${sonuc.yaziliSatirSayisi} adet rapor başarıyla senkronize edildi!</span>`;
+                    }
+                    
+                    if(typeof showToast === 'function') showToast(`${sonuc.yaziliSatirSayisi} rapor güncellendi!`, 'success');
+                    
+                    // YENİ: Hem İcmali Hem Raporları Anında Yenile!
+                    // DÜZELTME: Veritabanı bu senkronizasyondan önce boştu ve
+                    // il listesi hiç doldurulmamışsa (city-select boştu) bu
+                    // senaryoyu da kapsamak için önce il listesini tazeliyoruz.
+                    const oncekiIlSecimi = document.getElementById('city-select').value;
+                    await loadIlListesi();
+
+                    const citySelect = document.getElementById('city-select');
+                    if (oncekiIlSecimi) {
+                        const hedefSecenek = Array.from(citySelect.options)
+                            .find(o => o.value === oncekiIlSecimi);
+                        if (hedefSecenek) {
+                            citySelect.value = oncekiIlSecimi;
+                        }
+                    }
+
+                    if (citySelect.value) {
+                        const seciliIl = citySelect.value;
+                        loadIlVerisi(seciliIl); // İcmali yeniler
+
+                        // YENİ: Raporlar dosyasındaki (reports.js) fonksiyonu dışarıdan tetikliyoruz!
+                        if (typeof window.loadReportsTab === 'function') {
+                            window.loadReportsTab(seciliIl, currentSezon);
+                        }
+                    }
+                } else {
+                    const hata = await response.text();
+                    if(document.getElementById('google-sync-result')) document.getElementById('google-sync-result').innerHTML = `<span class="text-red-600">Senkronizasyon hatası: ${hata}</span>`;
+                    showToast(`Hata: ${hata}`, 'error');
+                }
+            } catch (err) {
+                if(document.getElementById('google-sync-result')) document.getElementById('google-sync-result').innerHTML = `<span class="text-red-600">Hata: Sunucuya ulaşılamadı.</span>`;
+            }
+        }
+
+        //buluttan API ile çeken fonksiyon
+        async function buluttanVeriCek(endpointUrl, resultDivId) {
+            const resultDiv = document.getElementById(resultDivId);
+            const seciliSezon = document.getElementById('import-season-input').value;
+            const urlInput = document.getElementById('google-csv-url').value.trim(); 
+            
+            if (!seciliSezon) {
+                resultDiv.innerHTML = '<span class="text-red-600">Önce bir sezon belirlemelisiniz.</span>';
+                return;
+            }
+
+            if (urlInput) {
+                try {
+                    await fetch('/api/reports/settings/sync-url', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: urlInput })
+                    });
+                } catch (e) {
+                    console.error("Link kaydedilemedi", e);
+                }
+            }
+
+            resultDiv.innerHTML = '<span class="text-gray-500"><i class="fa-solid fa-spinner fa-spin"></i> Google E-Tablo\'dan çekiliyor...</span>';
+
+            const formData = new FormData();
+            formData.append('sezon', seciliSezon);
+
+            try {
+                const response = await fetch(endpointUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const sonuc = await response.json();
+                    let html = `<span class="text-green-700 font-medium">
+                        <i class="fa-solid fa-circle-check"></i> ${sonuc.yaziliSatirSayisi} satır başarıyla senkronize edildi.
+                    </span>`;
+
+                    if (sonuc.uyarilar && sonuc.uyarilar.length > 0) {
+                        html += `<ul class="mt-2 text-left text-orange-700 list-disc list-inside space-y-1 text-xs max-h-32 overflow-y-auto">`;
+                        sonuc.uyarilar.forEach(u => html += `<li>${u}</li>`);
+                        html += `</ul>`;
+                    }
+                    resultDiv.innerHTML = html;
+                    
+                    // YENİ: Önce sezon listesini tazele (yeni sezon eklendiyse kutuya düşsün), sonra tabloyu anında çiz!
+                    await loadSezonListesi();
+
+                    // DÜZELTME: Veritabanı bu çekmeden önce boştu ve il listesi
+                    // hiç doldurulmamıştı (city-select boştu) senaryosunu da
+                    // kapsamak için, il listesini de tazeliyoruz. Eğer kullanıcı
+                    // zaten bir il seçmişse (normal senaryo), o seçimi koruyoruz;
+                    // sadece hiç seçim yoksa (ilk çekme / bos veritabani
+                    // senaryosu) loadIlListesi() otomatik olarak ilk ili secip
+                    // verisini yukleyecek.
+                    const oncekiIlSecimi = document.getElementById('city-select').value;
+                    await loadIlListesi();
+
+                    if (oncekiIlSecimi) {
+                        const citySelect = document.getElementById('city-select');
+                        const hedefSecenek = Array.from(citySelect.options)
+                            .find(o => o.value === oncekiIlSecimi);
+                        if (hedefSecenek) {
+                            citySelect.value = oncekiIlSecimi;
+                        }
+                        loadIlVerisi(citySelect.value);
+                    }
+                } else {
+                    const hataMetni = await response.text();
+                    resultDiv.innerHTML = `<span class="text-red-600">Hata: ${hataMetni}</span>`;
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<span class="text-red-600">Sunucuya ulaşılamadı: ${err.message}</span>`;
+            }
+        }
+
+        // Sayfa açıldığında veritabanındaki kayıtlı linki kutuya otomatik doldur
+        async function loadSavedSyncUrl() {
+            try {
+                const res = await fetch('/api/reports/settings/sync-url');
+                if (res.ok) {
+                    const url = await res.text();
+                    if (url) {
+                        document.getElementById('google-csv-url').value = url;
+                    }
+                }
+            } catch (ignored) {}
+        }
+
+        // Backend'den sınıflandırma sayılarını çeker ve SADECE kartları günceller
+        async function loadClassificationsSummary(ilAdi, sezon) {
+            try {
+                const response = await fetch(`/api/reports/classifications/summary?il=${encodeURIComponent(ilAdi)}&sezon=${sezon}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // İcmal sekmesindeki kartları güncelle
+                    document.getElementById('stat-egitim').textContent = data.EGITIM_SAYISI || 0;
+                    document.getElementById('stat-tahmin').textContent = data.TAHMIN_SAYISI || 0;
+                    
+                    // (AI metni güncelleme kodları buradan kaldırıldı, reports.js'ye taşındı)
+                }
+            } catch (err) {
+                console.error("Uydu verileri çekilemedi", err);
+            }
+        }
+
+
+
+        document.addEventListener("DOMContentLoaded", async function () {
+            await loadSezonListesi();
+            await loadIlListesi();
+            
+            // SİHİRLİ DOKUNUŞ: Sayfa yüklenir yüklenmez kayıtlı linki veritabanından çek ve kutuyu doldur!
+            await loadSavedSyncUrl();
+            
+            document.getElementById('city-select').addEventListener('change', function (e) {
+                loadIlVerisi(e.target.value);
+            });
+            document.getElementById('season-select').addEventListener('change', function (e) {
+                loadIlVerisi(document.getElementById('city-select').value);
+            });
+
+            document.getElementById('csv-download-btn').addEventListener('click', downloadCsv);
+            document.getElementById('xlsx-download-btn').addEventListener('click', downloadXlsx);
+            document.getElementById('chart-download-btn').addEventListener('click', downloadChart);
+
+            document.getElementById('urun-filtre-btn').addEventListener('click', () => {
+                document.getElementById('urun-filtre-panel').classList.toggle('hidden');
+            });
+            document.addEventListener('click', (e) => {
+                const panel = document.getElementById('urun-filtre-panel');
+                const btn = document.getElementById('urun-filtre-btn');
+                if (!panel.contains(e.target) && !btn.contains(e.target)) panel.classList.add('hidden');
+            });
+            document.getElementById('urun-filtre-tumunu-sec').addEventListener('click', () => {
+                gizliUrunler = new Set();
+                document.querySelectorAll('.urun-filtre-checkbox').forEach(cb => cb.checked = true);
+                filtreliGorunumuGuncelle();
+            });
+
+            document.getElementById('bot-tetikle-btn').addEventListener('click', acBotModal);
+            document.getElementById('bot-modal-kapat').addEventListener('click', kapatBotModal);
+            document.getElementById('bot-modal-iptal').addEventListener('click', kapatBotModal);
+            document.getElementById('bot-guncelle-btn').addEventListener('click', botGuncelle);
+
+            
+            // YENİ BULUT ÇEKME BUTONLARI
+            document.getElementById('cks-upload-btn').addEventListener('click', () =>
+                buluttanVeriCek('/api/import/cks-parsel', 'cks-upload-result'));
+                
+            document.getElementById('planlanan-upload-btn').addEventListener('click', () =>
+                buluttanVeriCek('/api/import/planlanan', 'planlanan-upload-result'));
+            
+            // (Rapor upload butonu artık yok, o yüzden onu sildik)
+
+            document.getElementById('period-select').addEventListener('change', function (e) {
+                loadIlVerisi(document.getElementById('city-select').value);
+            });
+
+            
+            // Google Buluttan Çek butonuna basıldığında fonksiyonu çağır
+            document.getElementById('google-sync-btn').addEventListener('click', fetchFromGoogleAndSave);
+        
+            // YENİ: Raporlar Sekmesindeki Hızlı Güncelle Butonu İşlevi
+            document.getElementById('btn-rapor-hizli-guncelle').addEventListener('click', async function(e) {
+                const btn = e.currentTarget;
+                const orjinalIcerik = btn.innerHTML;
+                
+                // Butona basıldığında dönen ikon (loading) gösterelim
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-agri-green"></i> Güncelleniyor...';
+                btn.disabled = true;
+                
+                await fetchFromGoogleAndSave(); // Arka planda mevcut senkronizasyon fonksiyonunu çalıştır
+                
+                // İşlem bitince butonu eski haline getir
+                btn.innerHTML = orjinalIcerik;
+                btn.disabled = false;
+            });
+
+        });
+    </script>
+
+    <!-- Yeni Raporlar ve Sekme Yöneticisi JS Dosyası -->
+    <script src="/js/reports.js"></script>
+
+</body>
+</html>
