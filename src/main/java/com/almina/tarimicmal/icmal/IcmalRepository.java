@@ -6,13 +6,7 @@ import org.springframework.stereotype.Repository;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * v_icmal view'ından veri okuyan repository.
- *
- * JPA yerine düz JdbcTemplate kullanıyoruz çünkü v_icmal bir VIEW,
- * gerçek bir tablo değil - doğal bir primary key'i yok ve hiç
- * INSERT/UPDATE yapmıyoruz, sadece okuyoruz. Bu basitlik için ideal.
- */
+
 @Repository
 public class IcmalRepository {
 
@@ -22,11 +16,7 @@ public class IcmalRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    /**
-     * Veritabanındaki tüm benzersiz (distinct) il isimlerini döndürür.
-     * Dropdown'ı dinamik doldurmak için kullanılacak - artık HTML'e elle
-     * il ismi yazmaya gerek yok.
-     */
+
     public List<String> findDistinctIller() {
         return jdbcTemplate.queryForList(
                 "SELECT DISTINCT il FROM v_icmal ORDER BY il",
@@ -41,14 +31,8 @@ public class IcmalRepository {
         );
     }
 
-    /**
-     * il ve/veya urun verilmezse (null ise) o filtre uygulanmaz.
-     * Örnek: findIcmal("Şırnak", null) -> Şırnak'taki tüm ürünler
-     *        findIcmal(null, "PAMUK") -> tüm illerdeki pamuk verisi
-     *        findIcmal(null, null)    -> tüm veri
-     */
+
     public List<IcmalRow> findIcmal(String il, String urun, Integer sezon, String donem) {
-        // İŞ KURALI KORUNDU: Sadece planlanan hedefleri olan ürünler listelenir.
         StringBuilder sql = new StringBuilder("""
                 SELECT il, urun, sezon,
                        parsel_4da_alti, parsel_4da_ustu,
@@ -75,7 +59,6 @@ public class IcmalRepository {
             sql.append(" AND sezon = ?");
             params.add(sezon);
         }
-        // YENİ: Dönem filtresi
         if (donem != null && !donem.isBlank()) {
             sql.append(" AND donem = ?");
             params.add(donem);

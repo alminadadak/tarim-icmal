@@ -23,16 +23,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * build_icmal.py ve build_classifications.py'nin Java karsiligi.
- *
- * ONEMLI: Bu sinif, Python scriptlerinin mantigini birebir izleyerek
- * yazildi ama gercek devlet portali API'sine karsi TEST EDILMEDI (bu
- * ortamdan o adrese erisim yok). Ozellikle tarih parse etme (parseTarih)
- * konusunda API'nin gercek formatini varsayarak yazdim - calisirken hata
- * alirsan (ozellikle "tarih parse edilemedi" loglari), o kismi API'nin
- * gercekte dondugu formata gore ayarlamamiz gerekecek.
- */
 @Service
 public class DataFetchService {
 
@@ -58,7 +48,6 @@ public class DataFetchService {
                 .build();
     }
 
-    /** build_icmal.py'nin sys.exit(2) ile isaretledigi "aga ulasilamadi" durumu. */
     public static class NetworkUnavailableException extends RuntimeException {
         public NetworkUnavailableException(String message) {
             super(message);
@@ -129,7 +118,7 @@ public class DataFetchService {
                 .header("Referer", "https://uydutakip.tarimorman.gov.tr/");
     }
 
-    // ─────────────────────── build_icmal.py KARSILIGI ───────────────────────
+    // ─────────────────────── build_icmal.py ───────────────────────
 
     public void fetchIcmal(String kullaniciAdi, String sifre, int sezon) {
         String token = login(kullaniciAdi, sifre);
@@ -250,12 +239,11 @@ public class DataFetchService {
         };
     }
 
-    // ─────────────────── build_classifications.py KARSILIGI ───────────────────
+    // ─────────────────── build_classifications.py ───────────────────
 
     public void fetchClassifications(String kullaniciAdi, String sifre) {
         String token = login(kullaniciAdi, sifre);
 
-        // Bilinen il isimlerini veritabanindan cek (normalize -> gercek isim haritasi)
         List<String> bilinenIller = jdbcTemplate.queryForList(
                 "SELECT DISTINCT name FROM agri_field_stats WHERE level = 'İl'", String.class);
         Map<String, String> normalizeHarita = new HashMap<>();
@@ -301,7 +289,7 @@ public class DataFetchService {
             for (String ilHam : illerHam) {
                 String normalizeKey = turkceNormalize(ilHam);
                 String il = normalizeHarita.get(normalizeKey);
-                if (il == null) continue; // bilinmeyen il, python'daki gibi atla
+                if (il == null) continue;
 
                 yazilacakSatirlar.add(new Object[]{
                         metin(kayit, "id"),
@@ -336,7 +324,6 @@ public class DataFetchService {
         System.out.println("Sınıflandırma: " + yazilacakSatirlar.size() + " satır yazıldı.");
     }
 
-    // parse_iller() karsiligi
     private List<String> illeriAyikla(String name) {
         String[] parts = name.split("-", -1);
         if (parts.length < 4) return List.of();
@@ -351,19 +338,13 @@ public class DataFetchService {
         return iller.stream().distinct().sorted().toList();
     }
 
-    // turkce_normalize() karsiligi
     private String turkceNormalize(String metin) {
         String s = metin.strip();
         s = s.replace("İ", "i").replace("I", "ı");
         return s.toLowerCase(Locale.ROOT);
     }
 
-    /**
-     * API'nin createdAt icin dondugu ISO-8601 tarih metnini parse eder.
-     * Format konusunda emin degilim - iki farkli yaygin format deniyorum,
-     * ikisi de basarisiz olursa null donup log basiyorum (satir yine de
-     * yaziliyor, sadece tarih bos kalir).
-     */
+
     private OffsetDateTime parseTarih(String metin) {
         if (metin == null || metin.isBlank()) return null;
         try {

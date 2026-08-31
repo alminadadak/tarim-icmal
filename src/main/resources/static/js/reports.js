@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- 1. SEKME (TAB) YÖNETİMİ ---
-    // --- 1. SEKME (TAB) YÖNETİMİ ---
+
     const btnIcmal = document.getElementById('tab-btn-icmal');
     const btnRaporlar = document.getElementById('tab-btn-raporlar');
     const btnYonetim = document.getElementById('tab-btn-yonetim'); // YENİ
@@ -34,8 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 2. YENİ RAPOR MODALI (POP-UP) OLUŞTURMA ---
-    // HTML'i kirletmemek için formu dinamik olarak JS ile sayfaya ekliyoruz
+
     const modalHTML = `
     <div id="rapor-modal-backdrop" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
@@ -93,12 +91,10 @@ document.addEventListener('DOMContentLoaded', () => {
         raporForm.reset();
     });
 
-    // --- 3. RAPOR KAYDETME İŞLEMİ ---
-    // --- 3. RAPOR KAYDETME İŞLEMİ ---
+
     raporForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        // 1. Submit (Kaydet) butonunu bul ve görsel olarak kilitle
         const submitBtn = raporForm.querySelector('button[type="submit"]');
         const orjinalIcerik = submitBtn.innerHTML;
         
@@ -125,19 +121,17 @@ document.addEventListener('DOMContentLoaded', () => {
             
             raporModal.classList.add('hidden');
             raporForm.reset();
-            loadPastReports(currentIlAdi); // Listeyi yenile
+            loadPastReports(currentIlAdi); 
         } catch (error) {
             console.error(error);
             if (typeof showToast === 'function') showToast('Rapor kaydedilemedi!', 'error');
         } finally {
-            // 2. İşlem başarılı da olsa hatalı da olsa butonu eski haline getir
             submitBtn.disabled = false;
             submitBtn.innerHTML = orjinalIcerik;
             submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
         }
     });
 
-    // --- 4. VERİ YÜKLEME VE AKILLI ÖZET (YAPAY ZEKA) MANTIĞI ---
     window.loadReportsTab = async function(ilAdi, sezon) {
         document.getElementById('ai-summary-content').innerHTML = '<span class="text-gray-500 italic text-sm"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Veriler analiz ediliyor...</span>';
         
@@ -147,7 +141,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function generateSmartSummary(ilAdi, sezon) {
         try {
-            // Arka planda hem kışlık, hem yazlık VE uydu verisini aynı anda çekiyoruz
             const [kislisRes, yazlikRes, uyduRes] = await Promise.all([
                 fetch(`/api/icmal?il=${encodeURIComponent(ilAdi)}&donem=Kışlık&sezon=${sezon}`),
                 fetch(`/api/icmal?il=${encodeURIComponent(ilAdi)}&donem=Yazlık&sezon=${sezon}`),
@@ -158,7 +151,6 @@ document.addEventListener('DOMContentLoaded', () => {
             let yazlikData = yazlikRes.ok ? await yazlikRes.json() : [];
             let uyduData = uyduRes.ok ? await uyduRes.json() : { EGITIM_SAYISI: 0, TAHMIN_SAYISI: 0 };
 
-            // İŞ KURALI: Tamamlanan < %70 VE Nihai Alan <= 10.000 ise Yetersiz!
             const analizEt = (data) => {
                 return data
                     .filter(r => r.tamamlananYuzde !== null && r.tamamlananYuzde < 70 && r.nihaiAlan <= 10000)
@@ -168,7 +160,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const kislisYetersizler = analizEt(kislisData);
             const yazlikYetersizler = analizEt(yazlikData);
 
-            // Kışlık için resmi cümle
             let kislisMetni = "";
             if (kislisData.length > 0) {
                 if (kislisYetersizler.length > 0) {
@@ -180,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 kislisMetni = `kışlık ürünlere ait sisteme girilmiş herhangi bir veri bulunmamaktadır.`;
             }
 
-            // Yazlık için resmi cümle (Buna ek olarak... bağlacı ile)
             let yazlikMetni = "";
             if (yazlikData.length > 0) {
                 if (yazlikYetersizler.length > 0) {
@@ -192,10 +182,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 yazlikMetni = `Yazlık ürünlere ait veri girişi ise henüz sağlanmamıştır.`;
             }
 
-            // YENİ: Uydu verisini şık bir rapor cümlesine dönüştürüyoruz
             let uyduMetni = `Ayrıca Uydu Takip Sistemi üzerinden ${sezon} sezonunda bu il için toplam <strong>${uyduData.EGITIM_SAYISI}</strong> eğitim ve <strong>${uyduData.TAHMIN_SAYISI}</strong> tahmin işlemi başarıyla tamamlanmıştır.`;
 
-            // Resmi yazışma diliyle birleştirilmiş paragraf tasarımı
             const tamMetin = `
                 <p class="text-justify text-gray-800 leading-relaxed mb-3" style="text-indent: 2rem;">
                     Yapılan incelemeler neticesinde; <strong>${ilAdi}</strong> ili <strong>${sezon}</strong> üretim sezonuna ait icmal verileri değerlendirildiğinde, ${kislisMetni} ${yazlikMetni}
@@ -213,8 +201,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 5. GEÇMİŞ RAPORLARI LİSTELEME ---
-    // --- 5. GEÇMİŞ RAPORLARI LİSTELEME VE İSTATİSTİKLER ---
     async function loadPastReports(ilAdi) {
         const listDiv = document.getElementById('reports-list');
         listDiv.innerHTML = '<span class="text-gray-400 text-sm italic">Kayıtlar aranıyor...</span>';
@@ -224,7 +210,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!res.ok) throw new Error('Veri çekilemedi');
             const reports = await res.json();
 
-            // 1. İstatistikleri Hesapla
             const sayac = {
                 'Görüşme': 0,
                 'Değerlendirme': 0,
@@ -235,8 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(sayac[r.kategori] !== undefined) sayac[r.kategori]++;
             });
 
-            // 2. Renkli İstatistik Kartları (Özet Paneli)
-            // 2. Renkli İstatistik Kartları (Daha Kibar ve Küçük Versiyon)
+
             const statsHtml = `
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                     <!-- Görüşme Kartı -->
@@ -282,16 +266,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
 
-            // Veri yoksa sadece istatistikleri (sıfır olarak) ve uyarıyı göster
             if (reports.length === 0) {
                 listDiv.innerHTML = statsHtml + '<div class="p-4 bg-gray-50 border border-dashed border-gray-300 rounded-lg text-center text-sm text-gray-500">Bu ile ait henüz bir saha notu girilmemiş.</div>';
                 return;
             }
 
-            // Önce istatistikleri ekrana bas
             listDiv.innerHTML = statsHtml;
 
-            // Sonra altına raporları döngüyle ekle
             reports.forEach(r => {
                 const d = r.raporTarihi.split('-');
                 const trTarih = `${d[2]}.${d[1]}.${d[0]}`;
@@ -318,9 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 6. ŞEHİR VEYA SEZON DEĞİŞTİĞİNDE RAPORLARI VE ÖZETİ GÜNCELLE ---
     document.getElementById('city-select').addEventListener('change', () => {
-        // Eğer şu an "Raporlar" sekmesi açıksa veriyi hemen tazele
         if (!sekmeRaporlar.classList.contains('hidden')) {
             const seciliIl = document.getElementById('city-select').value;
             const seciliSezon = document.getElementById('season-select').value;

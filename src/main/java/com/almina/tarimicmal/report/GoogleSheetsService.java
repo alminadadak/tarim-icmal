@@ -19,9 +19,6 @@ public class GoogleSheetsService {
 
     private static final String APPLICATION_NAME = "Tarim Rapor Botu";
 
-    /**
-     * JSON anahtar dosyasını kullanarak Google Sheets API İstemcisini (Client) başlatır.
-     */
     private Sheets getSheetsService() throws Exception {
         InputStream in = GoogleSheetsService.class.getResourceAsStream("/google-credentials.json");
         if (in == null) {
@@ -39,40 +36,29 @@ public class GoogleSheetsService {
                 .build();
     }
 
-    /**
-     * Verilen Google Sheet ID ve sekme (tab) adından tüm verileri 2 boyutlu liste olarak okur.
-     * Örn: sheetRange = "CKS_parsel!A:Z" veya "rapor_girişi!A:D"
-     */
+
     public List<List<Object>> readSheetData(String spreadsheetId, String sheetRange) throws Exception {
         Sheets service = getSheetsService();
         Sheets.Spreadsheets.Values.Get request = service.spreadsheets().values().get(spreadsheetId, sheetRange);
         ValueRange response = request.execute();
-        return response.getValues(); // Satırların ve sütunların listesini döner
+        return response.getValues(); 
     }
 
-    /**
-     * Belirtilen Google Sheet tablosunun en altındaki ilk boş satıra yeni veriyi ekler (Append).
-     * Örn: sheetName = "rapor_girişi" , rowData = [Adana, Görüşme, 2026-08-27, Not içeriği...]
-     */
+
     public void appendRowToSheet(String spreadsheetId, String sheetName, List<Object> rowData) throws Exception {
         Sheets service = getSheetsService();
         
-        // Hangi aralığa ekleneceğini belirtiyoruz (Örn: rapor_girişi!A:D)
         String range = sheetName + "!A:D";
 
         ValueRange body = new ValueRange().setValues(Collections.singletonList(rowData));
 
-        // USER_ENTERED: Girilen değerlerin metin mi sayı mı olduğunu Google'ın otomatik algılamasını sağlar
         service.spreadsheets().values()
                 .append(spreadsheetId, range, body)
                 .setValueInputOption("USER_ENTERED")
                 .execute();
     }
 
-    /**
-     * Uzun bir Google E-Tablo URL'sinden Spreadsheet ID'sini (Kimliğini) cımbızla çeker.
-     * Örn: https://docs.google.com/spreadsheets/d/1vTD6Ww1zdT_EJ.../edit -> 1vTD6Ww1zdT_EJ...
-     */
+
     public static String extractSpreadsheetId(String url) {
         if (url == null || !url.contains("/d/")) {
             return url; // Zaten ID formatında olabilir

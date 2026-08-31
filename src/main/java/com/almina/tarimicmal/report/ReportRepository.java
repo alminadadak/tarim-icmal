@@ -14,7 +14,6 @@ public class ReportRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    // Seçilen ile ait raporları tarihe göre (en yeni en üstte) getirir
     public List<AgriReport> findByIl(String il) {
         String sql = """
                 SELECT id, il, kategori, rapor_tarihi, notlar, created_at
@@ -33,7 +32,6 @@ public class ReportRepository {
         ), il);
     }
 
-    // Arayüzden gelen yeni raporu veritabanına kaydeder
     public void save(AgriReport report) {
         String sql = """
                 INSERT INTO agri_reports (il, kategori, rapor_tarihi, notlar)
@@ -42,10 +40,7 @@ public class ReportRepository {
         jdbcTemplate.update(sql, report.il(), report.kategori(), report.raporTarihi(), report.notlar());
     }
 
-    // Google'dan veya Excel'den gelen raporları topluca ve çok hızlı kaydeder
-    // Google'dan veya Excel'den gelen raporları akıllıca (mükerrer olmadan) kaydeder
     public void saveAll(List<AgriReport> reports) {
-        // SQL Diyor ki: "Eğer bu il, kategori, tarih ve nota sahip bir kayıt YOKSA (NOT EXISTS) ekle!"
         String sql = """
                 INSERT INTO agri_reports (il, kategori, rapor_tarihi, notlar)
                 SELECT ?, ?, ?, ?
@@ -57,13 +52,11 @@ public class ReportRepository {
 
         jdbcTemplate.batchUpdate(sql, reports, reports.size(),
             (ps, report) -> {
-                // 1. Kısım: Eklenecek veriler (SELECT kısmı için)
                 ps.setString(1, report.il());
                 ps.setString(2, report.kategori());
                 ps.setObject(3, report.raporTarihi());
                 ps.setString(4, report.notlar());
                 
-                // 2. Kısım: Kontrol edilecek veriler (NOT EXISTS kısmı için)
                 ps.setString(5, report.il());
                 ps.setString(6, report.kategori());
                 ps.setObject(7, report.raporTarihi());

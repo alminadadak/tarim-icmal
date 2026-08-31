@@ -18,7 +18,6 @@ public class BotController {
         this.botService = botService;
     }
 
-    // Frontend'den gelen JSON parametrelerini yakalamak için sınıf
     public static class BotLoginRequest {
         private String kullaniciAdi;
         private String sifre;
@@ -37,7 +36,6 @@ public class BotController {
 
     @PostMapping("/guncelle")
     public ResponseEntity<String> manuelGuncelle(@RequestBody BotLoginRequest request) {
-        // Parametrelerin boş gelip gelmediğini kontrol et
         if (request.getKullaniciAdi() == null || request.getSifre() == null || 
             request.getKullaniciAdi().trim().isEmpty() || request.getSifre().trim().isEmpty()) {
             return ResponseEntity.badRequest().body("Kullanıcı adı ve şifre eksik.");
@@ -47,7 +45,6 @@ public class BotController {
         }
 
         try {
-            // Parametreleri servise gönder
             botService.botuCalistir(request.getKullaniciAdi(), request.getSifre(), request.getSezon());
             return ResponseEntity.ok("Veriler başarıyla güncellendi!");
         } catch (Exception e) {

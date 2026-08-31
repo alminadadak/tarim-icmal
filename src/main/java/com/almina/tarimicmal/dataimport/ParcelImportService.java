@@ -25,7 +25,6 @@ public class ParcelImportService {
     private final JdbcTemplate jdbcTemplate;
     private final GoogleSheetsService googleSheetsService;
 
-    // YENİ: Google servisini constructor'a ekledik
     public ParcelImportService(JdbcTemplate jdbcTemplate, GoogleSheetsService googleSheetsService) {
         this.jdbcTemplate = jdbcTemplate;
         this.googleSheetsService = googleSheetsService;
@@ -39,7 +38,6 @@ public class ParcelImportService {
         List<String> uyarilar = new ArrayList<>();
         List<Object[]> yaziliSatirlar = new ArrayList<>();
 
-        // 1. Dosya yüklemek yerine Google API'den "CKS_parsel" sekmesini çekiyoruz
         List<List<Object>> rows = googleSheetsService.readSheetData(spreadsheetId, "CKS_parsel");
 
         if (rows == null || rows.isEmpty()) {
@@ -54,7 +52,6 @@ public class ParcelImportService {
         Map<Integer, String[]> kolonEslesme = new HashMap<>(); 
         List<String> eslesmeyenKolonlar = new ArrayList<>();
 
-        // 2. Başlıkları analiz et (Senin eski muazzam Regex mantığın)
         for (int i = 0; i < basliklar.size(); i++) {
             String baslik = getHucre(basliklar, i);
             if (baslik.isEmpty()) continue;
@@ -75,7 +72,6 @@ public class ParcelImportService {
 
         OffsetDateTime simdi = OffsetDateTime.now();
 
-        // 3. Veri satırlarını oku (Index 1'den başlıyor)
         for (int rowIdx = 1; rowIdx < rows.size(); rowIdx++) {
             List<Object> row = rows.get(rowIdx);
             if (row.isEmpty()) continue;
@@ -100,18 +96,13 @@ public class ParcelImportService {
                 Double alti = entry.getValue().get("ALTI");
                 Double ustu = entry.getValue().get("ÜSTÜ");
                 
-                // Eğer ikisi de boşsa boşuna veritabanına yazma
                 if (alti != null || ustu != null) { 
                     yaziliSatirlar.add(new Object[]{sezon, il, urun, alti, ustu, simdi});
                 }
             }
         }
 
-        // 4. Veritabanına upsert (Sadece benzersiz id'lere sahip olanları günceller/ekler)
-        // H2'YE GECIS NOTU: Postgres'in ON CONFLICT ... DO UPDATE yapisi yerine
-        // H2'nin kendi upsert komutu olan MERGE INTO ... KEY(...) kullanildi.
-        // KEY olarak verdigimiz (season, il, crop) uzerinde zaten UNIQUE constraint
-        // var (bkz. V3 migration), MERGE INTO bunu kullanarak insert/update karar veriyor.
+
         String sql = """
                 MERGE INTO agri_parcel_size_stats (season, il, crop, parcels_under_4da, parcels_over_4da, updated_at)
                 KEY (season, il, crop)
@@ -123,19 +114,16 @@ public class ParcelImportService {
         return new ImportResult(yaziliSatirlar.size(), uyarilar);
     }
 
-    // YENİ: List<Object> içinden güvenle string okuma metodu
     private String getHucre(List<Object> row, int index) {
         if (index >= row.size() || row.get(index) == null) return "";
         return row.get(index).toString().trim();
     }
 
-    // YENİ: String veriyi Double'a çeviren akıllı metot (Virgülleri noktaya çevirir)
     private Double sayiyaCevirVeyaNull(List<Object> row, int index, String il, String urun, String metrik, List<String> uyarilar) {
         String metin = getHucre(row, index);
         if (metin.isEmpty()) return null;
 
         try {
-            // "1000,5" gibi Türkçe formatlı ondalıkları Java'nın anlayacağı "1000.5" formatına çevir
             String temizMetin = metin.replace(" ", "").replace(",", ".");
             return Double.parseDouble(temizMetin);
         } catch (Exception e) {

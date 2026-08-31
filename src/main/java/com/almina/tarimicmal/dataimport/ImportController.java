@@ -17,7 +17,6 @@ public class ImportController {
     private final PlannedImportService plannedImportService;
     private final JdbcTemplate jdbcTemplate;
 
-    // YENİ: Veritabanından linki okuyabilmek için JdbcTemplate ekledik
     public ImportController(ParcelImportService parcelImportService,
                             PlannedImportService plannedImportService,
                             JdbcTemplate jdbcTemplate) {
@@ -26,9 +25,7 @@ public class ImportController {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    /**
-     * Ortak Yardımcı Metot: Veritabanından linki bulup Spreadsheet ID'yi çıkarır
-     */
+
     private String getSpreadsheetId() {
         List<String> urls = jdbcTemplate.queryForList("SELECT setting_value FROM app_settings WHERE setting_key = 'google_sync_url'", String.class);
         if (urls.isEmpty() || urls.get(0) == null || urls.get(0).isEmpty()) {
@@ -37,7 +34,6 @@ public class ImportController {
         return GoogleSheetsService.extractSpreadsheetId(urls.get(0));
     }
 
-    // YENİ: Artık MultipartFile (dosya) istemiyoruz, sadece sezon bilgisini alıyoruz
     @PostMapping("/api/import/cks-parsel")
     public ResponseEntity<?> importCksParsel(@RequestParam("sezon") Integer sezon) {
         if (sezon == null) {
@@ -55,7 +51,6 @@ public class ImportController {
         }
     }
 
-    // YENİ: Artık MultipartFile (dosya) istemiyoruz, sadece sezon bilgisini alıyoruz
     @PostMapping("/api/import/planlanan")
     public ResponseEntity<?> importPlanlanan(@RequestParam("sezon") Integer sezon) {
         if (sezon == null) {

@@ -1,8 +1,4 @@
--- H2 NOTU: WITH (CTE) syntax olarak H2'de destekleniyor ve ilk calistirmada
--- sorunsuz calisiyor, ANCAK H2'nin CTE'li view'leri dahili olarak saklama
--- sekli bir motor hatasina yol aciyor: veritabani dosyasi KAPATILIP TEKRAR
--- ACILDIGINDA "View already exists" hatasi veriyor (H2 2.2.224). Bu yuzden
--- CTE yerine duz subquery kullaniyoruz - islevsel olarak birebir ayni.
+
 
 DROP VIEW IF EXISTS v_icmal;
 
@@ -21,10 +17,7 @@ SELECT
     COALESCE(fs.referenced_area, 0)        AS nihai_alan,
     CASE
         WHEN pt.planned_count IS NULL OR pt.planned_count = 0 THEN NULL
-        -- PERFORMANS DUZELTMESI: NUMERIC/DECFLOAT bolme islemi H2 2.2.224'te
-        -- son derece yavas (35 saniye/2000 satir olculdu!). DOUBLE'a CAST
-        -- ederek native kayan noktali aritmetige geciyoruz - yuzde gostermek
-        -- icin hassasiyet kaybi onemsiz.
+
         ELSE ROUND(100.0 * CAST(COALESCE(fs.referenced_field_count, 0) AS DOUBLE) / CAST(pt.planned_count AS DOUBLE), 1)
     END                                    AS tamamlanan_yuzde,
     COALESCE(fs.updated_at, pt.updated_at, ps.updated_at) AS son_guncelleme

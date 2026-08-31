@@ -7,5 +7,4 @@ CREATE TABLE IF NOT EXISTS agri_reports (
     created_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Belirli bir il icin raporlari cekerken (findByIl) kullanilacak index
 CREATE INDEX IF NOT EXISTS idx_agri_reports_il ON agri_reports (il);

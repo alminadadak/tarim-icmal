@@ -19,7 +19,6 @@ public class ReportController {
     private final ReportImportService reportImportService;
     private final JdbcTemplate jdbcTemplate; 
 
-    // DÜZELTİLDİ: googleSheetsService buraya eklendi!
     public ReportController(GoogleSheetsService googleSheetsService,
                             ReportRepository reportRepository, 
                             ReportImportService reportImportService,
@@ -41,14 +40,11 @@ public class ReportController {
     @PostMapping
     public ResponseEntity<?> addReport(@RequestBody AgriReport report) {
         try {
-            // 1. Önce kendi veritabanımıza kaydedelim
             reportRepository.save(report);
 
-            // 2. Google Linkini veritabanından GÜVENLİ bir şekilde bul
             List<String> urls = jdbcTemplate.queryForList("SELECT setting_value FROM app_settings WHERE setting_key = 'google_sync_url'", String.class);
             String url = urls.isEmpty() ? null : urls.get(0);
             
-            // 3. Google Excel'in en alt satırına veriyi ekle!
             if (url != null && !url.isEmpty()) {
                 String spreadsheetId = GoogleSheetsService.extractSpreadsheetId(url);
                 
@@ -72,7 +68,6 @@ public class ReportController {
     @PostMapping("/sync")
     public ResponseEntity<?> syncReportsFromCloud() {
         try {
-            // Veritabanından linki GÜVENLİ bir şekilde al
             List<String> urls = jdbcTemplate.queryForList("SELECT setting_value FROM app_settings WHERE setting_key = 'google_sync_url'", String.class);
             String url = urls.isEmpty() ? null : urls.get(0);
             
@@ -82,7 +77,6 @@ public class ReportController {
 
             String spreadsheetId = GoogleSheetsService.extractSpreadsheetId(url);
             
-            // Yeni servisi çağır
             ImportResult sonuc = reportImportService.importFromCloud(spreadsheetId);
             return ResponseEntity.ok(sonuc);
 
@@ -109,12 +103,10 @@ public class ReportController {
         }
     }
 
-    // Google CSV linkini veritabanına kaydeder
     @PostMapping("/settings/sync-url")
     public ResponseEntity<?> saveSyncUrl(@RequestBody Map<String, String> body) {
         try {
             String url = body.get("url");
-            // H2'YE GECIS NOTU: MERGE INTO ... KEY(...) - Postgres'in ON CONFLICT'i yerine.
             jdbcTemplate.update(
                 "MERGE INTO app_settings (setting_key, setting_value) " +
                 "KEY (setting_key) VALUES ('google_sync_url', ?)",
@@ -126,13 +118,10 @@ public class ReportController {
         }
     }
 
-    // Seçilen il ve sezona göre Eğitim ve Tahmin sayılarını getirir
     @GetMapping("/classifications/summary")
     public ResponseEntity<?> getClassificationsSummary(@RequestParam String il, @RequestParam(required = false) Integer sezon) {
         try {
-            // H2'YE GECIS NOTU: COUNT(*) FILTER (WHERE ...) yerine, her veritabaninda
-            // sorunsuz calisan SUM(CASE WHEN ... THEN 1 ELSE 0 END) kullandim - FILTER
-            // H2'de calisiyor olabilirdi ama garantiye almak istedim.
+
             String sql = "SELECT " +
                         "SUM(CASE WHEN is_train = true THEN 1 ELSE 0 END) as egitim_sayisi, " +
                         "SUM(CASE WHEN is_test = true THEN 1 ELSE 0 END) as tahmin_sayisi " +
@@ -147,7 +136,6 @@ public class ReportController {
             }
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            // Hata olursa veya tablo boşsa 0 döndür, arayüzü bozma
             return ResponseEntity.ok(Map.of("egitim_sayisi", 0, "tahmin_sayisi", 0));
         }
     }

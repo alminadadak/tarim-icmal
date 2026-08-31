@@ -20,7 +20,6 @@ public class PlannedImportService {
         "KANOLA / KOLZA", "KANOLA"
     );
 
-    // YENİ: Google servisini constructor'a ekledik
     public PlannedImportService(JdbcTemplate jdbcTemplate, GoogleSheetsService googleSheetsService) {
         this.jdbcTemplate = jdbcTemplate;
         this.googleSheetsService = googleSheetsService;
@@ -36,22 +35,20 @@ public class PlannedImportService {
         List<String> uyarilar = new ArrayList<>();
         List<Object[]> yaziliSatirlar = new ArrayList<>();
 
-        // 1. Dosya yüklemek yerine Google API'den "Planlanan" sekmesini çekiyoruz
         List<List<Object>> rows = googleSheetsService.readSheetData(spreadsheetId, "Planlanan");
 
         if (rows == null || rows.size() < 2) {
             throw new IllegalArgumentException("'Planlanan' sayfasında yeterli veri veya başlık bulunamadı.");
         }
 
-        List<Object> ustBaslik = rows.get(0);   // ürün adları (birleşik hücreler)
-        List<Object> altBaslik = rows.get(1);   // Tüm / Kışlık / Yazlık
+        List<Object> ustBaslik = rows.get(0);   
+        List<Object> altBaslik = rows.get(1);   
 
         int sonKolon = Math.max(ustBaslik.size(), altBaslik.size());
 
         Map<Integer, KolonBilgisi> kolonEslesme = new HashMap<>();
         String sonGorulenUrun = null;
 
-        // 2. Başlıkları analiz et (Yatay forward-fill)
         for (int col = 2; col < sonKolon; col++) {
             String ustHucre = getHucre(ustBaslik, col);
             if (!ustHucre.isEmpty()) {
@@ -72,18 +69,17 @@ public class PlannedImportService {
         OffsetDateTime simdi = OffsetDateTime.now();
         String sonGorulenGrup = null;
 
-        // 3. Veri satırlarını oku (Dikey forward-fill) - 2. satırdan (index 2) başlıyor
         for (int rowIdx = 2; rowIdx < rows.size(); rowIdx++) {
             List<Object> row = rows.get(rowIdx);
             if (row.isEmpty()) continue;
 
             String grupHucre = getHucre(row, 0);
             if (!grupHucre.isEmpty()) {
-                sonGorulenGrup = grupHucre; // dikey forward-fill (birleşik hücre)
+                sonGorulenGrup = grupHucre; 
             }
 
             String il = getHucre(row, 1);
-            if (il.isEmpty()) continue; // boş satırları atla
+            if (il.isEmpty()) continue; 
 
             for (Map.Entry<Integer, KolonBilgisi> entry : kolonEslesme.entrySet()) {
                 int colIdx = entry.getKey();
@@ -99,9 +95,7 @@ public class PlannedImportService {
             }
         }
 
-        // 4. Veritabanına upsert
-        // H2'YE GECIS NOTU: MERGE INTO ... KEY(...) - ayrinti icin
-        // ParcelImportService'teki ayni degisiklige bakabilirsin.
+
         String sql = """
                 MERGE INTO agri_planned_targets (season, grup, il, crop, period, planned_count, updated_at)
                 KEY (season, il, crop, period)
@@ -113,19 +107,16 @@ public class PlannedImportService {
         return new ImportResult(yaziliSatirlar.size(), uyarilar);
     }
 
-    // YENİ: List<Object> içinden güvenle string okuma metodu
     private String getHucre(List<Object> row, int index) {
         if (index >= row.size() || row.get(index) == null) return "";
         return row.get(index).toString().trim();
     }
 
-    // YENİ: String veriyi Double'a çeviren akıllı metot (Virgülleri noktaya çevirir)
     private Double sayiyaCevirVeyaNull(List<Object> row, int index, String il, String urun, String donem, List<String> uyarilar) {
         String metin = getHucre(row, index);
         if (metin.isEmpty()) return null;
 
         try {
-            // "1000,5" gibi Türkçe formatlı ondalıkları Java'nın anlayacağı "1000.5" formatına çevir
             String temizMetin = metin.replace(" ", "").replace(",", ".");
             return Double.parseDouble(temizMetin);
         } catch (Exception e) {

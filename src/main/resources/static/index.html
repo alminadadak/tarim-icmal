@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tarım Verisi Analiz Paneli</title>
-    <!-- ÇIKIŞ YAP BUTONU (Güvenli POST Yöntemi) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -24,7 +23,6 @@
         }
     </script>
 
-    <!-- Toastify CSS ve JS -->
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
@@ -66,7 +64,6 @@
                         </select>
                     </div>
                     
-                    <!-- (Eski Rapor Butonu Buradan Silindi) -->
                 </div>
             </div>
         </div>
@@ -89,7 +86,7 @@
             </div>
         </div>
 
-        <!-- YENİ: SEKME (TAB) MENÜSÜ -->
+        <!-- SEKME (TAB) MENÜSÜ -->
         <div class="flex border-b border-gray-200 mb-8 overflow-x-auto">
             <button id="tab-btn-icmal" class="py-3 px-6 text-sm font-bold text-agri-green border-b-2 border-agri-green bg-agri-light/30 transition-colors whitespace-nowrap">
                 <i class="fa-solid fa-chart-pie mr-2"></i> İcmal Tablosu
@@ -102,10 +99,10 @@
             </button>
         </div>
 
-        <!-- YENİ: 1. SEKME İÇERİĞİ (İCMAL) -->
+        <!-- SEKME İÇERİĞİ (İCMAL) -->
         <div id="sekme-icmal" class="block">
             
-            <!-- UYDU EĞİTİM & TAHMİN İSTATİSTİKLERİ -->
+            <!-- TAHMİN İSTATİSTİKLERİ -->
             <div class="flex flex-wrap items-center gap-4 mb-6">
                 <div class="bg-blue-50 border border-blue-100 rounded-lg px-4 py-2 flex items-center gap-3 shadow-sm transition-colors hover:bg-blue-100/50">
                     <span class="text-xs text-blue-600 font-bold uppercase tracking-wider">Eğitim</span>
@@ -185,9 +182,9 @@
                     </div>
                 </div>
             </div>
-        </div> <!-- /#sekme-icmal kapanışı -->
+        </div> 
 
-        <!-- YENİ: 2. SEKME İÇERİĞİ (RAPORLAR VE ANALİZ) -->
+        <!-- YRAPORLAR VE ANALİZ -->
         <div id="sekme-raporlar" class="hidden space-y-6">
             
             <!-- AKILLI ÖZET KUTUSU -->
@@ -196,7 +193,6 @@
                     <span class="text-indigo-600 font-bold">Sistem Analiz Özeti</span>
                 </h2>
                 <div id="ai-summary-content" class="text-gray-700 leading-relaxed font-medium space-y-2">
-                    <!-- JavaScript buraya otomatik cümleler kuracak -->
                     <span class="text-gray-500 italic text-sm">Veriler analiz ediliyor...</span>
                 </div>
             </div>
@@ -208,7 +204,7 @@
                         Rapor Girişleri
                     </h2>
                     <div class="flex gap-2 w-full sm:w-auto">
-                        <!-- YENİ: HIZLI GÜNCELLE BUTONU -->
+                        <!-- HIZLI GÜNCELLE BUTONU -->
                         <button id="btn-rapor-hizli-guncelle" class="flex-1 sm:flex-none bg-white border border-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors shadow-sm flex justify-center items-center gap-2">
                             <i class="fa-solid fa-arrows-rotate text-agri-green"></i> Raporları Güncelle
                         </button>
@@ -221,13 +217,12 @@
                 
                 <!-- Rapor Listesi -->
                 <div id="reports-list" class="space-y-4">
-                    <!-- JavaScript ile burası dolacak -->
                 </div>
             </div>
         </div> <!-- /#sekme-raporlar kapanışı -->
 
 
-        <!-- YENİ: 3. SEKME İÇERİĞİ (VERİ YÖNETİMİ) -->
+        <!-- VERİ YÖNETİMİ -->
         <div id="sekme-yonetim" class="hidden space-y-6">
             
             <!-- Link Giriş Alanı -->
@@ -719,10 +714,7 @@
                 if (response.ok) {
                     resultDiv.innerHTML = `<span class="text-green-700 font-medium"><i class="fa-solid fa-circle-check"></i> ${mesaj}</span>`;
 
-                    // DÜZELTME: Veritabanı bot çalışmadan önce boştu ve il
-                    // listesi hiç doldurulmamışsa (city-select boştu) bu
-                    // senaryoyu da kapsamak için önce sezon ve il listelerini
-                    // tazeliyoruz.
+
                     await loadSezonListesi();
 
                     const oncekiIlSecimi = currentIlAdi;
@@ -749,8 +741,7 @@
 
         async function loadSezonListesi() {
             const select = document.getElementById('season-select');
-            const eskiSecim = select.value; // YENİ: Kullanıcının mevcut seçimini hafızaya al
-
+            const eskiSecim = select.value; 
             try {
                 const response = await fetch('/api/sezonlar');
                 const sezonlar = await response.json();
@@ -766,7 +757,6 @@
                     select.appendChild(option);
                 });
                 
-                // YENİ: Eğer kullanıcının eski seçimi hala geçerliyse onu seçili bırak, yoksa en yeniyi seç
                 if (eskiSecim && sezonlar.includes(parseInt(eskiSecim))) {
                     select.value = eskiSecim;
                     currentSezon = eskiSecim;
@@ -824,7 +814,7 @@
             const select = document.getElementById('city-select');
             try {
                 const response = await fetch('/api/iller');
-                let iller = await response.json(); // const yerine let yaptık ki sıralayabilelim
+                let iller = await response.json(); 
                 
                 iller.sort((a, b) => a.localeCompare(b, 'tr', { sensitivity: 'accent' }));
                 select.innerHTML = '';
@@ -843,8 +833,7 @@
             }
         }
 
-        // --- GOOGLE'DAN VERİ ÇEKME (YENİ BULUT MİMARİSİ) ---
-        // --- GOOGLE'DAN VERİ ÇEKME (YENİ BULUT MİMARİSİ) ---
+
         async function fetchFromGoogleAndSave() {
             const urlInput = document.getElementById('google-csv-url').value.trim();
             const resultDiv = document.getElementById('google-sync-result') || document.getElementById('btn-rapor-hizli-guncelle'); // Hangi butona basıldığına göre
@@ -877,10 +866,7 @@
                     
                     if(typeof showToast === 'function') showToast(`${sonuc.yaziliSatirSayisi} rapor güncellendi!`, 'success');
                     
-                    // YENİ: Hem İcmali Hem Raporları Anında Yenile!
-                    // DÜZELTME: Veritabanı bu senkronizasyondan önce boştu ve
-                    // il listesi hiç doldurulmamışsa (city-select boştu) bu
-                    // senaryoyu da kapsamak için önce il listesini tazeliyoruz.
+
                     const oncekiIlSecimi = document.getElementById('city-select').value;
                     await loadIlListesi();
 
@@ -895,9 +881,8 @@
 
                     if (citySelect.value) {
                         const seciliIl = citySelect.value;
-                        loadIlVerisi(seciliIl); // İcmali yeniler
+                        loadIlVerisi(seciliIl); 
 
-                        // YENİ: Raporlar dosyasındaki (reports.js) fonksiyonu dışarıdan tetikliyoruz!
                         if (typeof window.loadReportsTab === 'function') {
                             window.loadReportsTab(seciliIl, currentSezon);
                         }
@@ -959,16 +944,9 @@
                     }
                     resultDiv.innerHTML = html;
                     
-                    // YENİ: Önce sezon listesini tazele (yeni sezon eklendiyse kutuya düşsün), sonra tabloyu anında çiz!
                     await loadSezonListesi();
 
-                    // DÜZELTME: Veritabanı bu çekmeden önce boştu ve il listesi
-                    // hiç doldurulmamıştı (city-select boştu) senaryosunu da
-                    // kapsamak için, il listesini de tazeliyoruz. Eğer kullanıcı
-                    // zaten bir il seçmişse (normal senaryo), o seçimi koruyoruz;
-                    // sadece hiç seçim yoksa (ilk çekme / bos veritabani
-                    // senaryosu) loadIlListesi() otomatik olarak ilk ili secip
-                    // verisini yukleyecek.
+
                     const oncekiIlSecimi = document.getElementById('city-select').value;
                     await loadIlListesi();
 
@@ -1003,7 +981,7 @@
             } catch (ignored) {}
         }
 
-        // Backend'den sınıflandırma sayılarını çeker ve SADECE kartları günceller
+        // Backend'den sınıflandırma sayılarını çeker ve sadece kartları günceller
         async function loadClassificationsSummary(ilAdi, sezon) {
             try {
                 const response = await fetch(`/api/reports/classifications/summary?il=${encodeURIComponent(ilAdi)}&sezon=${sezon}`);
@@ -1014,7 +992,6 @@
                     document.getElementById('stat-egitim').textContent = data.EGITIM_SAYISI || 0;
                     document.getElementById('stat-tahmin').textContent = data.TAHMIN_SAYISI || 0;
                     
-                    // (AI metni güncelleme kodları buradan kaldırıldı, reports.js'ye taşındı)
                 }
             } catch (err) {
                 console.error("Uydu verileri çekilemedi", err);
@@ -1027,7 +1004,6 @@
             await loadSezonListesi();
             await loadIlListesi();
             
-            // SİHİRLİ DOKUNUŞ: Sayfa yüklenir yüklenmez kayıtlı linki veritabanından çek ve kutuyu doldur!
             await loadSavedSyncUrl();
             
             document.getElementById('city-select').addEventListener('change', function (e) {
@@ -1061,35 +1037,29 @@
             document.getElementById('bot-guncelle-btn').addEventListener('click', botGuncelle);
 
             
-            // YENİ BULUT ÇEKME BUTONLARI
             document.getElementById('cks-upload-btn').addEventListener('click', () =>
                 buluttanVeriCek('/api/import/cks-parsel', 'cks-upload-result'));
                 
             document.getElementById('planlanan-upload-btn').addEventListener('click', () =>
                 buluttanVeriCek('/api/import/planlanan', 'planlanan-upload-result'));
             
-            // (Rapor upload butonu artık yok, o yüzden onu sildik)
 
             document.getElementById('period-select').addEventListener('change', function (e) {
                 loadIlVerisi(document.getElementById('city-select').value);
             });
 
             
-            // Google Buluttan Çek butonuna basıldığında fonksiyonu çağır
             document.getElementById('google-sync-btn').addEventListener('click', fetchFromGoogleAndSave);
         
-            // YENİ: Raporlar Sekmesindeki Hızlı Güncelle Butonu İşlevi
             document.getElementById('btn-rapor-hizli-guncelle').addEventListener('click', async function(e) {
                 const btn = e.currentTarget;
                 const orjinalIcerik = btn.innerHTML;
                 
-                // Butona basıldığında dönen ikon (loading) gösterelim
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-agri-green"></i> Güncelleniyor...';
                 btn.disabled = true;
                 
-                await fetchFromGoogleAndSave(); // Arka planda mevcut senkronizasyon fonksiyonunu çalıştır
+                await fetchFromGoogleAndSave(); 
                 
-                // İşlem bitince butonu eski haline getir
                 btn.innerHTML = orjinalIcerik;
                 btn.disabled = false;
             });
