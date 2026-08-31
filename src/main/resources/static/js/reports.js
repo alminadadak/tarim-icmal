@@ -156,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let kislisData = kislisRes.ok ? await kislisRes.json() : [];
             let yazlikData = yazlikRes.ok ? await yazlikRes.json() : [];
-            let uyduData = uyduRes.ok ? await uyduRes.json() : { egitim_sayisi: 0, tahmin_sayisi: 0 }; // YENİ
+            let uyduData = uyduRes.ok ? await uyduRes.json() : { EGITIM_SAYISI: 0, TAHMIN_SAYISI: 0 };
 
             // İŞ KURALI: Tamamlanan < %70 VE Nihai Alan <= 10.000 ise Yetersiz!
             const analizEt = (data) => {
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // YENİ: Uydu verisini şık bir rapor cümlesine dönüştürüyoruz
-            let uyduMetni = `Ayrıca Uydu Takip Sistemi üzerinden ${sezon} sezonunda bu il için toplam <strong>${uyduData.egitim_sayisi}</strong> eğitim ve <strong>${uyduData.tahmin_sayisi}</strong> tahmin işlemi başarıyla tamamlanmıştır.`;
+            let uyduMetni = `Ayrıca Uydu Takip Sistemi üzerinden ${sezon} sezonunda bu il için toplam <strong>${uyduData.EGITIM_SAYISI}</strong> eğitim ve <strong>${uyduData.TAHMIN_SAYISI}</strong> tahmin işlemi başarıyla tamamlanmıştır.`;
 
             // Resmi yazışma diliyle birleştirilmiş paragraf tasarımı
             const tamMetin = `
