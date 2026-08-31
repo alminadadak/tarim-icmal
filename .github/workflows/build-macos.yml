@@ -29,7 +29,7 @@ jobs:
             --main-jar tarim-icmal-0.0.1-SNAPSHOT.jar \
             --main-class org.springframework.boot.loader.launch.JarLauncher \
             --name TarimIcmal \
-            --app-version 0.0.1 \
+            --app-version 1.0.0 \
             --dest dist
 
       - name: Paketi zip'le
