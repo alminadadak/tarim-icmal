@@ -1,0 +1,44 @@
+
+name: Build macOS App
+
+on:
+  workflow_dispatch:   # Elle "Run workflow" ile tetiklenir
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Kodu indir
+        uses: actions/checkout@v4
+
+      - name: JDK 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Maven ile build et
+        run: mvn clean package -DskipTests
+
+      - name: jpackage ile .app paketi oluştur
+        run: |
+          jpackage \
+            --type app-image \
+            --input target \
+            --main-jar tarim-icmal-0.0.1-SNAPSHOT.jar \
+            --main-class org.springframework.boot.loader.launch.JarLauncher \
+            --name TarimIcmal \
+            --app-version 0.0.1 \
+            --dest dist
+
+      - name: Paketi zip'le
+        run: |
+          cd dist
+          zip -r TarimIcmal-macos.zip TarimIcmal.app
+
+      - name: Artifact olarak yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: TarimIcmal-macos
+          path: dist/TarimIcmal-macos.zip
